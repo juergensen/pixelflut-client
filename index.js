@@ -13,7 +13,7 @@ const totalHeight = 1080;
 const host = '151.217.40.82';
 const port = 1234;
 
-const workers = 20;
+const workers = 40;
 const bulkSize = 1;
 const strategy = STRATEGIES[2];
 const imageScale = 2;
