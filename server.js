@@ -1,21 +1,19 @@
 const Jimp = require("jimp");
-var app = require('http').createServer(handler)
-var io = require('socket.io')(app);
+const chunkify = require('./chunkify')
 
 const STRATEGIES = ['vertical', 'horizontal', 'random'];
 const totalWidth = 1920;
 const totalHeight = 1080;
 
+const host = '151.217.40.82';
+const port = 1234;
+
 const bulkSize = 1;
 const strategy = STRATEGIES[2];
-const imageScale = 2;
-const originX = totalWidth/2 - Math.floor(95 * imageScale)
-const originY = totalHeight - Math.floor(379 * imageScale);
+const imageScale = 1;
+const originX = totalWidth/2 - Math.floor(850 * imageScale)
+const originY = totalHeight/2 - Math.floor(568 * imageScale);
 const imageFilename = 'chaos.png'
-
-app.listen(3333);
-
-function handler (req, res) {}
 
 async function generatePictureTasks(originX, originY, imageScale, filename) {
   let pixels = []
@@ -71,54 +69,37 @@ function rgbToHex(r, g, b, a) {
   return componentToHex(r) + componentToHex(g) + componentToHex(b) + componentToHex(a);
 }
 
-function chunkify(a, n, balanced) {
-
-  if (n < 2)
-    return [a];
-
-  var len = a.length,
-    out = [],
-    i = 0,
-    size;
-
-  if (len % n === 0) {
-    size = Math.floor(len / n);
-    while (i < len) {
-      out.push(a.slice(i, i += size));
-    }
-  }
-
-  else if (balanced) {
-    while (i < len) {
-      size = Math.ceil((len - i) / n--);
-      out.push(a.slice(i, i += size));
-    }
-  }
-
-  else {
-
-    n--;
-    size = Math.floor(len / n);
-    if (len % size === 0)
-      size--;
-    while (i < size * n) {
-      out.push(a.slice(i, i += size));
-    }
-    out.push(a.slice(size * n));
-
-  }
-  return out
-}
-
-io.on('connection', async function (socket) {
-  console.log('New Client')
-  console.log(Object.keys(io.sockets.sockets))
-  
-  //const tasks = generateRectTasks(1900, 1000, 10, 'FF69B4')
-  let tasks = await generatePictureTasks(originX, originY, imageScale, imageFilename)
+async function distributeTasks(io, tasks) {
   // console.log(JSON.stringify(tasks, null, 2))
   console.log(tasks.length)
-  
-  let taskChunks = chunkify(tasks, Object.keys(io.sockets.sockets).length, true);
 
-});
+  const socketIds = Object.keys(io.sockets.sockets)
+  
+  console.log(`Distribute to ${socketIds.length} Clients`)
+
+  let taskChunks = chunkify(tasks, socketIds.length, true);
+  for (let i = 0; i < socketIds.length; i++) {
+    const taskChunk = taskChunks[i]
+    const socket = io.sockets.sockets[socketIds[i]]
+    socket.emit('task', { host, port, tasks: taskChunk})
+  }
+} 
+
+(async function setup() {
+  let tasks = await generatePictureTasks(originX, originY, imageScale, imageFilename)
+
+  var app = require('http').createServer()
+  var io = require('socket.io')(app);
+
+  io.on('connection', async function (socket) {
+    console.log('New Client')
+    distributeTasks(io, tasks)
+    socket.on('disconnect', () => {
+      console.log('Disconnected')
+      distributeTasks(io, tasks)
+    })
+  });
+
+  app.listen(3333);
+  console.log('server started')
+})()
