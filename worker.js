@@ -1,7 +1,11 @@
 const net = require('net');
-const fs = require('fs');
-const [,,worker, port, host] = process.argv;
-const tasks = require(`./tasks/task${worker}.json`);
+
+const {
+  workerData
+} = require('worker_threads');
+
+const {worker, port, host, tasks} = workerData;
+
 const client = net.Socket({allowHalfOpen: true});
 client.connect({port, host}, async function () {
   console.log('worker ' + worker + ' connected');
