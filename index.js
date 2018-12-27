@@ -11,7 +11,7 @@ const totalHeight = 1080;
 const host = '151.217.40.82';
 const port = 1234;
 
-const workers = 20;
+const workers = 40;
 const bulkSize = 1;
 const strategy = STRATEGIES[1];
 const imageScale = 2;
@@ -86,6 +86,7 @@ function spawnWorkers (tasks) {
     stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
   };
   taskChunks.forEach((taskChunk, index) => {
+    if(index % 2 !== 0) return;
     let filepath = `./tasks/task${index}.json`;
     const parameters = [index, port, host];
     fs.writeFile(filepath, JSON.stringify(taskChunk), 'utf8', () => {
