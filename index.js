@@ -2,6 +2,9 @@ const fork = require('child_process').fork;
 const net = require('net');
 const fs = require('fs')
 const Jimp = require("jimp");
+const {
+  Worker
+} = require('worker_threads');
 
 const client = new net.Socket();
 
@@ -13,10 +16,10 @@ const port = 1234;
 
 const workers = 20;
 const bulkSize = 1;
-const strategy = STRATEGIES[1];
+const strategy = STRATEGIES[2];
 const imageScale = 2;
-const originX = 0 //totalWidth/2 - Math.floor(95 * imageScale)
-const originY = 0 //totalHeight - Math.floor(379 * imageScale);
+const originX = totalWidth/2 - Math.floor(95 * imageScale)
+const originY = totalHeight - Math.floor(379 * imageScale);
 const imageFilename = 'Rakete.jpg'
 
 function generateRectTasks(originX, originY, size, color) {
@@ -34,6 +37,7 @@ async function generatePictureTasks(originX, originY, imageScale, filename) {
   const image = await Jimp.read(filename)
   image
     .scale(imageScale)
+    .rotate(-15)
     .scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
       let red   = this.bitmap.data[ idx + 0 ];
       let green = this.bitmap.data[ idx + 1 ];
@@ -60,20 +64,24 @@ async function generatePictureTasks(originX, originY, imageScale, filename) {
   }
   const tasks = pixels.map(({x, y, red, green, blue, alpha}) => `PX ${x} ${y} ${rgbToHex(red, green, blue, alpha)}\n`)
   // bulk together
-  let bulkTasks = tasks.reduce((bulkTasks, task, index) => {
-    const bulkIndex = Math.floor(index / bulkSize);
-    if(!bulkTasks[bulkIndex]) bulkTasks[bulkIndex] = '';
-    bulkTasks[bulkIndex] += task;
-    return bulkTasks;
-  }, [])
-  return bulkTasks
+  if (bulkSize > 1) {
+    let bulkTasks = tasks.reduce((bulkTasks, task, index) => {
+      const bulkIndex = Math.floor(index / bulkSize);
+      if(!bulkTasks[bulkIndex]) bulkTasks[bulkIndex] = '';
+      bulkTasks[bulkIndex] += task;
+      return bulkTasks;
+    }, [])
+    return bulkTasks
+  } else {
+    return tasks
+  }
 }
 
 
 (async function () {
   //const tasks = generateRectTasks(1900, 1000, 10, 'FF69B4')
   const tasks = await generatePictureTasks(originX, originY, imageScale, imageFilename)
-  console.log(JSON.stringify(tasks, null, 2))
+  // console.log(JSON.stringify(tasks, null, 2))
   console.log(tasks.length)
   spawnWorkers(tasks)
 })()
@@ -82,23 +90,22 @@ async function generatePictureTasks(originX, originY, imageScale, filename) {
 function spawnWorkers (tasks) {
   let taskChunks = chunkify(tasks, workers, true);
   const program = './worker.js';
-  const options = {
-    stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-  };
   taskChunks.forEach((taskChunk, index) => {
     let filepath = `./tasks/task${index}.json`;
-    const parameters = [index, port, host];
-    fs.writeFile(filepath, JSON.stringify(taskChunk), 'utf8', () => {
-      const workerProcess = fork(program, parameters, options);
-
-      workerProcess.stdout.on('data', function(data) {
-        console.log(data.toString());
-      });
-
-      workerProcess.stderr.on('data', function(err) {
-        console.log(err.toString());
-      });
-    })
+    const workerData = {
+      worker: index,
+      port,
+      host,
+      tasks: taskChunk
+    };
+    const worker = new Worker(program, {
+      workerData
+    });
+    worker.on('message', msg => console.log(`Worker ${index} message`, msg));
+    worker.on('error', error => console.log(`Worker ${index}, error`, error));
+    worker.on('exit', (code) => {
+      if (code !== 0) console.log(`Worker ${index} exit`, code);
+    });
   })
 }
 
