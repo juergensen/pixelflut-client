@@ -24,6 +24,7 @@ socket.on('connect', function(){
 });
 socket.on('disconnect', function(){
   console.log('disconnect')
+  workers.forEach(worker => worker.unref())
 });
 socket.on('task', function({host, port, tasks}) {
   console.log(`spawning workers with ${tasks.length} tasks`)
