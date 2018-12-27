@@ -14,13 +14,13 @@ const totalHeight = 1080;
 const host = '151.217.40.82';
 const port = 1234;
 
-const workers = 40;
+const workers = 20;
 const bulkSize = 1;
 const strategy = STRATEGIES[2];
 const imageScale = 2;
 const originX = totalWidth/2 - Math.floor(95 * imageScale)
 const originY = totalHeight - Math.floor(379 * imageScale);
-const imageFilename = 'Rakete.jpg'
+const imageFilename = 'chaos.png'
 
 function generateRectTasks(originX, originY, size, color) {
   const tasks = []
@@ -91,7 +91,6 @@ function spawnWorkers (tasks) {
   let taskChunks = chunkify(tasks, workers, true);
   const program = './worker.js';
   taskChunks.forEach((taskChunk, index) => {
-    if(index % 2 !== 0) return;
     let filepath = `./tasks/task${index}.json`;
     const workerData = {
       worker: index,
