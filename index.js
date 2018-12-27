@@ -1,12 +1,11 @@
-const fork = require('child_process').fork;
-const net = require('net');
-const fs = require('fs')
 const Jimp = require("jimp");
 const {
   Worker
 } = require('worker_threads');
 
-const client = new net.Socket();
+const workerRestartCounter = {};
+const workerRestartTimeout = 1000;
+const workerRestartLimit = 20;
 
 const STRATEGIES = ['vertical', 'horizontal', 'random'];
 const totalWidth = 1920;
@@ -89,24 +88,35 @@ async function generatePictureTasks(originX, originY, imageScale, filename) {
 // Utilities
 function spawnWorkers (tasks) {
   let taskChunks = chunkify(tasks, workers, true);
-  const program = './worker.js';
   taskChunks.forEach((taskChunk, index) => {
-    let filepath = `./tasks/task${index}.json`;
     const workerData = {
       worker: index,
       port,
       host,
       tasks: taskChunk
     };
-    const worker = new Worker(program, {
-      workerData
-    });
-    worker.on('message', msg => console.log(`Worker ${index} message`, msg));
-    worker.on('error', error => console.log(`Worker ${index}, error`, error));
-    worker.on('exit', (code) => {
-      if (code !== 0) console.log(`Worker ${index} exit`, code);
-    });
+    spawnWorker(workerData)
   })
+}
+
+function spawnWorker (workerData) {
+  const program = './worker.js';
+  const worker = new Worker(program, {
+    workerData
+  });
+  worker.on('message', msg => console.log(`Worker ${workerData.worker} message`, msg));
+  worker.on('error', error => console.log(`Worker ${workerData.worker}, error`, error));
+  worker.on('exit', (code) => {
+    if (code !== 0) {
+      console.log(`Worker ${workerData.worker} exit`, code)
+      console.log(`restarting Worker ${workerData.worker}`)
+      if (!workerRestartCounter[workerData.worker] || workerRestartCounter[workerData.worker] < workerRestartLimit) {
+        setTimeout(() => spawnWorker(workerData), workerRestartTimeout)
+      } else {
+        console.log(`restartLimit for Worker ${workerData.worker} exeeded`)
+      }
+    };
+  });
 }
 
 function componentToHex(c) {
