@@ -5,14 +5,14 @@ const STRATEGIES = ['vertical', 'horizontal', 'random'];
 const totalWidth = 1920;
 const totalHeight = 1080;
 
-const host = '151.217.40.82';
-const port = 1234;
+const host = '151.217.41.151';
+const port = 8080;
 
-const bulkSize = 1;
+const bulkSize = 10;
 const strategy = STRATEGIES[2];
-const imageScale = 1;
-const originX = totalWidth/2 - Math.floor(850 * imageScale)
-const originY = totalHeight/2 - Math.floor(568 * imageScale);
+const imageScale = 1/10;
+const originX = 0
+const originY = 0;
 const imageFilepath = __dirname + '/chaos.png'
 
 async function generatePictureTasks(originX, originY, imageScale, filename) {
@@ -20,7 +20,7 @@ async function generatePictureTasks(originX, originY, imageScale, filename) {
   const image = await Jimp.read(filename)
   image
     .scale(imageScale)
-    .rotate(-15)
+    // .rotate(-15)
     .scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
       let red   = this.bitmap.data[ idx + 0 ];
       let green = this.bitmap.data[ idx + 1 ];

@@ -33,7 +33,8 @@ socket.on('task', function({host, port, tasks}) {
 socket.on('error', console.log)
 
 async function spawnWorkers ({host, port, tasks}) {
-  await Promise.all(workers.map(worker => new Promise(resolve => worker.terminate(resolve))));
+  workers.forEach(worker => worker.unref())
+  // await Promise.all(workers.map(worker => new Promise(resolve => worker.terminate(resolve))));
 
   let taskChunks = chunkify(tasks, workerCount, true);
   taskChunks.forEach((taskChunk, index) => {

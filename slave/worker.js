@@ -8,7 +8,6 @@ const {worker, port, host, tasks} = workerData;
 
 const client = net.Socket({allowHalfOpen: true});
 const connection = client.connect({port, host}, async function () {
-  console.log('worker ' + worker + ' connected');
   // noinspection InfiniteLoopJS
   while (true) {
     for (let task of tasks) {
