@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node --experimental-worker client.js",
-    "start:server": "node server.js",
+    "start:master": "node master/",
+    "start:slave": "node --experimental-worker slave/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Momme Jürgensen, Torge Jürgensen",
   "license": "ISC",
   "dependencies": {
+    "commander": "^2.19.0",
     "jimp": "^0.6.0",
     "socket.io": "^2.2.0"
   }

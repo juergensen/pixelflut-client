@@ -1,7 +1,18 @@
-var socket = require('socket.io-client')('http://localhost:3333');
-const chunkify = require('./chunkify')
+var program = require('commander');
+program
+  .option('-h, --host', 'Websocket Server URI')
+  .option('-w, --workers', 'Worker-Count')
+  .parse(process.argv);
+
+const port = 3333
+const host = program.host || 'http://151.217.35.113'
+console.log(host)
+var socket = require('socket.io-client')(`${host}:${port}`);
+
+const chunkify = require('../lib/chunkify')
 const {Worker} = require('worker_threads');
-const workerCount = 10;
+
+const workerCount = Number.parseInt(program.workers || 20);
 const workerRestartCounter = {};
 const workerRestartTimeout = 1000;
 const workerRestartLimit = 20;
@@ -19,6 +30,8 @@ socket.on('task', function({host, port, tasks}) {
   spawnWorkers({host, port, tasks})
 });
 
+socket.on('error', console.log)
+
 async function spawnWorkers ({host, port, tasks}) {
   await Promise.all(workers.map(worker => new Promise(resolve => worker.terminate(resolve))));
 
@@ -35,7 +48,7 @@ async function spawnWorkers ({host, port, tasks}) {
 }
 
 function spawnWorker (workerData) {
-  const program = './worker.js';
+  const program = __dirname + '/worker.js';
   const worker = new Worker(program, {
     workerData
   });

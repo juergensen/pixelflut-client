@@ -1,5 +1,5 @@
 const Jimp = require("jimp");
-const chunkify = require('./chunkify')
+const chunkify = require('../lib/chunkify')
 
 const STRATEGIES = ['vertical', 'horizontal', 'random'];
 const totalWidth = 1920;
@@ -13,7 +13,7 @@ const strategy = STRATEGIES[2];
 const imageScale = 1;
 const originX = totalWidth/2 - Math.floor(850 * imageScale)
 const originY = totalHeight/2 - Math.floor(568 * imageScale);
-const imageFilename = 'chaos.png'
+const imageFilepath = __dirname + '/chaos.png'
 
 async function generatePictureTasks(originX, originY, imageScale, filename) {
   let pixels = []
@@ -86,7 +86,7 @@ async function distributeTasks(io, tasks) {
 } 
 
 (async function setup() {
-  let tasks = await generatePictureTasks(originX, originY, imageScale, imageFilename)
+  let tasks = await generatePictureTasks(originX, originY, imageScale, imageFilepath)
 
   var app = require('http').createServer()
   var io = require('socket.io')(app);
